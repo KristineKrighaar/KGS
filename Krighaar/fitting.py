@@ -2,7 +2,6 @@
 My personal funtions libary 
 
 Kristine M. L. Krighaar
-
 """
 import numpy as np
 import scipy as sc
@@ -17,7 +16,15 @@ def gauss(x, A, mu, sigma: np.ndarray) -> np.ndarray:
     return  A*np.exp(-(x-mu)** 2 / (2*sigma**2))
 
 def gaussN(x, *params):
-    """Sum of Gaussian curves."""
+    """
+    Sum of Gaussian curves
+    
+    Parameters:
+    - x: array, independent variable
+    - params: dict, function of parameter *should have order (A1, mu1, sigma1, ..., AN, muN, sigmaN)*
+    
+    returns: function values, np.ndarray 
+    """
     num_gaussians = len(params) // 3
     
     gaussians = [gauss(x,A = params[i], mu = params[i+1], sigma = params[i+2]) for i in range(0,len(params),3)]
@@ -26,6 +33,9 @@ def gaussN(x, *params):
 def fit(x: np.ndarray, y: np.ndarray, y_err: np.ndarray, model_func, initial_guess, fixed_params=None, limits=None):
     """
     Chi2 fit data to a user-defined model function using iminuit with support for fixed and limited parameters.
+
+    NOTE: If the parameter names as specified in the function you can write in any order and it will sort.
+          *If the parameter names are different make sure the order is right compared to function!*
 
     Parameters:
     - x: array, independent variable
