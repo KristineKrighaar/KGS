@@ -108,6 +108,79 @@ def T_c_func(T, I, T_c, beta, C):
 Data formatting funtions?
 """
 
+from scipy.interpolate import interp1d
+import warnings
+from scipy.optimize import fsolve
+
+
+def fit_to_crossing_point(x1, y1, x2, y2, initial_guess):
+    """
+    Find one crossing point by making interpolation of datasets and solving for the crossing.
+
+    NOTE: Maybe in future make more general to fit multiple points. Could use closest crossing points to make initial guesses.
+
+    Parameters:
+    - x1, y1: Data points for the first dataset
+    - x2, y2: Data points for the second dataset
+    - initial_guess: Tuple (x0, y0) representing the initial guess for the crossing point
+
+    Returns:
+    - crossing_point: NumPy array of shape (2,) representing the refined crossing point using fsolve.
+                      Returns None if no crossing point is found.
+    """
+    # Perform linear interpolation on both datasets
+    interp_func1 = interp1d(x1, y1, kind='linear', fill_value='extrapolate') # type: ignore
+    interp_func2 = interp1d(x2, y2, kind='linear', fill_value='extrapolate') # type: ignore
+
+    # Define the function to find the root of
+    def equation_to_solve(xy):
+        return [interp_func1(xy[0]) - interp_func2(xy[0]), xy[1] - interp_func1(xy[0])]
+
+    # Use fsolve to find the root (crossing point) starting from the initial guess
+    crossing_point = fsolve(equation_to_solve, initial_guess)
+
+    # Check if the crossing point is valid (not NaN)
+    if np.any(np.isnan(crossing_point)): # type: ignore
+        return None
+
+    return np.array(crossing_point)
+
+def closest_crossing_points(x1, y1, x2, y2):
+    """
+    Find the closest crossing points of two datasets.
+
+    Parameters:
+    - x1, y1: Data points for the first dataset
+    - x2, y2: Data points for the second dataset
+
+    Returns:
+    - crossing_points: NumPy array of shape (n, 2) representing crossing points
+                      where each row is [x, y]. Returns None if no crossing points are found.
+    """
+    # Perform linear interpolation on both datasets
+    interp_func1 = interp1d(x1, y1, kind='linear', fill_value='extrapolate') # type: ignore
+    interp_func2 = interp1d(x2, y2, kind='linear', fill_value='extrapolate') # type: ignore
+
+    # Find the common x-values
+    common_x = np.unique(np.concatenate([x1, x2]))
+
+    # Evaluate interpolated functions at common x-values
+    y1_interp = interp_func1(common_x)
+    y2_interp = interp_func2(common_x)
+
+    # Find indices where the functions cross (change sign)
+    cross_indices = np.where(np.diff(np.sign(y1_interp - y2_interp)))[0]
+
+    # Check if there are no crossing points
+    if len(cross_indices) == 0:
+        return None
+
+    # Calculate crossing points (x, y) using linear interpolation
+    crossing_points = np.array([(common_x[idx], interp_func1(common_x[idx])) for idx in cross_indices])
+
+    return crossing_points
+
+
 def rebin_xy_close_values(x_values, y_values, y_errors, x_threshold=0.2):
     """
     Rebin x and y arrays by averaging y-values for x-values closer than x_threshold.
