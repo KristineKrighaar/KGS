@@ -1,4 +1,13 @@
 """
+KGS = Kristine's Golden Stasndard
+
+My personal funtions libary 
+
+Kristine M. L. Krighaar
+
+"""
+
+"""
 Neutron calucations functions
 """
 

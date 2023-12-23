@@ -1,4 +1,6 @@
 """
+KGS = Kristines Golden Stasndard
+
 My personal funtions libary 
 
 Kristine M. L. Krighaar
