@@ -111,7 +111,6 @@ Data formatting funtions?
 """
 
 from scipy.interpolate import interp1d
-import warnings
 from scipy.optimize import fsolve
 
 
