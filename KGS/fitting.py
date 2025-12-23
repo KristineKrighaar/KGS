@@ -32,7 +32,7 @@ def gaussN(x, *params):
     gaussians = [gauss(x,A = params[i], mu = params[i+1], sigma = params[i+2]) for i in range(0,len(params),3)]
     return np.sum(gaussians, axis=0)
 
-def fit(x: np.ndarray, y: np.ndarray, y_err: np.ndarray, model_func, initial_guess, fixed_params=None, limits=None):
+def fit(x: np.ndarray, y: np.ndarray, y_err: np.ndarray, model_func, initial_guess, limits=None, fixed_params=None,):
     """
     Chi2 fit data to a user-defined model function using iminuit with support for fixed and limited parameters.
 
@@ -53,7 +53,7 @@ def fit(x: np.ndarray, y: np.ndarray, y_err: np.ndarray, model_func, initial_gue
 
     # Create Minuit fitting object
     
-    mObject = Chi2Regression(model_func, x[y>0], y[y>0], y_err[y>0]) # Chi**2 fit to the histograms excluding the empty bins.
+    mObject = Chi2Regression(model_func, x[abs(y)>1e-8], y[abs(y)>1e-8], y_err[abs(y)>1e-8]) # Chi**2 fit to the histograms excluding the empty bins.
     
     minuit = Minuit(mObject, **initial_guess, name=initial_guess.keys())
 
@@ -67,20 +67,20 @@ def fit(x: np.ndarray, y: np.ndarray, y_err: np.ndarray, model_func, initial_gue
 
     # Set fixed parameters
     if fixed_params:
-        minuit.fixed = fixed_params
+        for param_name, fixed_values in fixed_params.items():
+            #print(param_name, fixed_values)
+            minuit.fixed[param_name] = fixed_values
 
     # Set parameter limits
     if limits:
         for param_name, limit_values in limits.items():
+            #print(param_name, limit_values)
             minuit.limits[param_name] = limit_values
 
     # Perform the fit
     minuit.migrad()
 
     return minuit
-
-
-
 
 
 
@@ -104,6 +104,8 @@ def T_c_func(T, I, T_c, beta, C):
     return I*(np.abs(T-T_c))**(2*beta)+C
 
 
+def superGauss(x,A, mu, w, P):
+    return A*np.exp(-np.log(2) (4*(x-mu)** 2 / (w))**P)
 
 
 """
@@ -221,6 +223,39 @@ def rebin_xy_close_values(x_values, y_values, y_errors, x_threshold=0.2):
         i = close_indices[-1] + 1
 
     return np.array(rebinned_x), np.array(rebinned_y), np.array(rebinned_y_errors)
+
+def rebin_data(x, y, y_err, bin_size=2):
+    """Rebins data by grouping every `bin_size` points together.
+    
+    Args:
+        x (array-like): x values.
+        y (array-like): y values.
+        y_err (array-like): y error values.
+        bin_size (int): Number of points to group together.
+        
+    Returns:
+        tuple: (x_rebinned, y_rebinned, y_err_rebinned)
+    """
+    x = np.array(x)
+    y = np.array(y)
+    y_err = np.array(y_err)
+
+    # Ensure the number of points is a multiple of bin_size
+    remainder = len(x) % bin_size
+    if remainder != 0:
+        x = x[:-remainder]
+        y = y[:-remainder]
+        y_err = y_err[:-remainder]
+
+    # Reshape arrays into (N/bin_size, bin_size) and take mean
+    x_rebinned = x.reshape(-1, bin_size).mean(axis=1)
+    y_rebinned = y.reshape(-1, bin_size).mean(axis=1)
+    
+    # Propagate errors: sqrt(mean of squared errors)
+    y_err_rebinned = np.sqrt(np.sum(y_err.reshape(-1, bin_size) ** 2, axis=1)) / bin_size
+    
+    
+    return x_rebinned, y_rebinned, y_err_rebinned
 
 
 """
